@@ -23,7 +23,8 @@ const personas = [
 
 try {
   if (fs.existsSync(archivoHistorial)) {
-    historial = JSON.parse(fs.readFileSync(archivoHistorial));
+    const historialData = fs.readFileSync(archivoHistorial, 'utf8');
+    historial = historialData ? JSON.parse(historialData) : [];
   }
 } catch (error) {
   console.error("Error al leer el archivo de historial:", error);
@@ -45,7 +46,6 @@ function agregarHistorial(persona) {
   historial.push({ fecha: hoy, persona: persona.nombre }); // Guarda solo el nombre
   try {
     fs.writeFileSync(archivoHistorial, JSON.stringify(historial, null, 2));
-    historial = JSON.parse(fs.readFileSync(archivoHistorial));
   } catch (error) {
     console.error("Error al escribir o leer el archivo de historial:", error);
   }
