@@ -1,6 +1,6 @@
 const express = require("express");
 const app = express();
-const { put, get } = require('@vercel/blob');
+const { put, get, del } = require('@vercel/blob'); // Importar `del` para eliminar blobs
 
 const telefonoGeneral = "999-999-9999";
 const BLOB_STORE_URL = "https://guardia-java-blob.vercel.app"; // URL de tu blob store en Vercel
@@ -69,6 +69,14 @@ async function agregarHistorial(persona) {
 
     // Agregar el nuevo registro al historial
     historial.push(nuevoRegistro);
+
+    // Eliminar el archivo existente (si existe)
+    try {
+      await del(`${BLOB_STORE_URL}/${ARCHIVO_HISTORIAL}`);
+      console.log("Archivo existente eliminado.");
+    } catch (error) {
+      console.error("Error al eliminar el archivo existente:", error);
+    }
 
     // Guardar el historial actualizado en el blob store
     await put(`${BLOB_STORE_URL}/${ARCHIVO_HISTORIAL}`, JSON.stringify(historial), {
