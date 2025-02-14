@@ -22,10 +22,6 @@ const personas = [
 
 // Obtener la persona en guardia esta semana
 async function obtenerGuardiaActual() {
-  const fechaInicio = new Date("2024-01-01"); // Lunes base
-  const hoy = new Date();
-  const semanasTranscurridas = Math.floor((hoy - fechaInicio) / (7 * 24 * 60 * 60 * 1000));
-
   try {
     // Obtener el historial desde el blob store
     const { blobs } = await list(BLOB_STORE_URL);
@@ -43,14 +39,13 @@ async function obtenerGuardiaActual() {
       })
       .filter(entry => entry !== null); // Filtra entradas inválidas
 
-    // Inicializar historial si está vacío
-    if (historial.length === 0) {
-      historial.push({ fecha: "2024-01-01", persona: personas[0].nombre });
+    // Si hay historial, devolver la última entrada
+    if (historial.length > 0) {
+      return historial[historial.length - 1].persona;
     }
 
-    return historial.length > semanasTranscurridas
-      ? historial[semanasTranscurridas].persona
-      : personas[semanasTranscurridas % personas.length].nombre;
+    // Si no hay historial, devolver la primera persona
+    return personas[0].nombre;
   } catch (error) {
     console.error("Error al obtener el historial desde el blob store:", error);
     return personas[0].nombre; // Devuelve la primera persona como valor predeterminado
