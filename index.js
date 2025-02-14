@@ -1,6 +1,12 @@
 const express = require("express");
 const app = express();
-const { kv } = require('@vercel/edge-config');
+
+const axios = require('axios');
+const multer = require('multer');
+const FormData = require('form-data');
+
+const upload = multer({ dest: 'uploads/' });
+
 
 const telefonoGeneral = "999-999-9999";
 const personas = [
@@ -19,30 +25,26 @@ const personas = [
 ];
 
 async function obtenerHistorial() {
-  try{  
-    if (!process.env.EDGE_CONFIG) {
-      throw new Error("EDGE_CONFIG environment variable is not set.");
-    }
-    const historial = await kv.get("historial", { store: "guardia-java-store" });
-    console.log('Historial desde Edge Config Store:', historial);
+  try {
+    const response = await axios.get('https://api.vercel.com/v1/now/blob/guardia-java-blob');
+    console.log('Historial desde Blob Store:', response.data);
 
-    return historial ? JSON.parse(historial) : [];
+    return response.data ? JSON.parse(response.data) : [];
   } catch (error) {
-    console.error("Error al obtener el historial desde Edge Config Store:", error);
+    console.error("Error al obtener el historial desde Blob Store:", error);
     return []; // Devolver un historial vacío en caso de error
   }
 }
-
 // Obtener la persona en guardia esta semana
 async function obtenerGuardiaActual() {
-  try{
+  try {
     const fechaInicio = new Date("2024-01-01"); // Lunes base
     const hoy = new Date();
     const semanasTranscurridas = Math.floor((hoy - fechaInicio) / (7 * 24 * 60 * 60 * 1000));
-  
+
     const historial = await obtenerHistorial();
     console.log('Historial:', historial);
-  
+
     if (historial.length > semanasTranscurridas) {
       console.log('Guardia actual desde historial:', historial[semanasTranscurridas].persona);
       return historial[semanasTranscurridas].persona;
@@ -63,13 +65,27 @@ async function agregarHistorial(persona) {
   const historial = await obtenerHistorial();
 
   historial.push({ fecha: hoy, persona: persona.nombre });
-  await kv.set("historial", JSON.stringify(historial), { store: "guardia-java-store" });
+
+  const formData = new FormData();
+  formData.append('file', JSON.stringify(historial));
+
+  try {
+    await axios.post('https://api.vercel.com/v1/now/blob/guardia-java-blob/upload', formData, {
+      headers: {
+        ...formData.getHeaders(),
+        'Authorization': `Bearer ${process.env.VERCEL_TOKEN}` // Token de autenticación de Vercel
+      }
+    });
+    console.log('Historial actualizado en Blob Store');
+  } catch (error) {
+    console.error("Error al agregar el historial al Blob Store:", error);
+  }
 }
 
 app.use(express.json());
 
 app.get("/", async (req, res) => {
-  try{  
+  try {
     const guardia = await obtenerGuardiaActual();
     const guardiaInfo = personas.find(p => p.nombre === guardia);
     res.json({
@@ -83,7 +99,7 @@ app.get("/", async (req, res) => {
 });
 
 app.get("/saltar", async (req, res) => {
-  try{  
+  try {
     const actual = await obtenerGuardiaActual();
     let index = personas.findIndex(p => p.nombre === actual);
     let siguiente = (index + 1) % personas.length;
@@ -94,6 +110,27 @@ app.get("/saltar", async (req, res) => {
   }
 });
 
-console.log('Conexión con Edge Config:', process.env.EDGE_CONFIG);
+// Endpoint para subir archivos (si es necesario para otras operaciones)
+app.post("/upload", upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).send('No file uploaded');
+    }
+
+    const formData = new FormData();
+    formData.append('file', req.file.path);
+
+    const response = await axios.post('https://api.vercel.com/v1/now/blob/guardia-java-blob/upload', formData, {
+      headers: {
+        ...formData.getHeaders(),
+        'Authorization': `Bearer ${process.env.VERCEL_TOKEN}`
+      }
+    });
+
+    res.json({ message: 'File uploaded successfully', file: response.data });
+  } catch (error) {
+    res.status(500).send('Error uploading file');
+  }
+});
 
 module.exports = app;
