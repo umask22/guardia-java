@@ -62,7 +62,7 @@ app.get("/", (req, res) => {
   });
 });
 
-app.post("/saltar", (req, res) => {
+app.get("/saltar", (req, res) => {
   const actual = obtenerGuardiaActual();
 
   let index = personas.findIndex(p => p.nombre === actual);
