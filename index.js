@@ -19,19 +19,39 @@ const personas = [
 ];
 
 async function obtenerHistorial() {
-  const historial = await kv.get("historial", { store: "guardia-java-store" });
-  return historial ? JSON.parse(historial) : [];
+  try{  
+    const historial = await kv.get("historial", { store: "guardia-java-store" });
+    console.log('Historial desde Edge Config Store:', historial);
+
+    return historial ? JSON.parse(historial) : [];
+  } catch (error) {
+    console.error("Error al obtener el historial desde Edge Config Store:", error);
+    return []; // Devolver un historial vacío en caso de error
+  }
 }
 
 // Obtener la persona en guardia esta semana
 async function obtenerGuardiaActual() {
-  const fechaInicio = new Date("2024-01-01"); // Lunes base
-  const hoy = new Date();
-  const semanasTranscurridas = Math.floor((hoy - fechaInicio) / (7 * 24 * 60 * 60 * 1000));
-  const historial = await obtenerHistorial();
-  return historial.length > semanasTranscurridas
-  ? historial[semanasTranscurridas].persona
-  : personas[semanasTranscurridas % personas.length].nombre;
+  try{
+    const fechaInicio = new Date("2024-01-01"); // Lunes base
+    const hoy = new Date();
+    const semanasTranscurridas = Math.floor((hoy - fechaInicio) / (7 * 24 * 60 * 60 * 1000));
+  
+    const historial = await obtenerHistorial();
+    console.log('Historial:', historial);
+  
+    if (historial.length > semanasTranscurridas) {
+      console.log('Guardia actual desde historial:', historial[semanasTranscurridas].persona);
+      return historial[semanasTranscurridas].persona;
+    } else {
+      const personaGuardia = personas[semanasTranscurridas % personas.length].nombre;
+      console.log('Guardia calculada de personas:', personaGuardia);
+      return personaGuardia;
+    }
+  } catch (error) {
+    console.error("Error al obtener la guardia actual:", error);
+    throw new Error("Error al obtener la guardia actual");
+  }
 }
 
 // Agregar guardia al historial
