@@ -6,6 +6,4 @@ app.get("/", (req, res) => {
     res.send("hola mundo");
 });
 
-app.listen(port, () => {
-    console.log('servidor ejecuntando ... en ${port}');
-});
+module.exports = app;
