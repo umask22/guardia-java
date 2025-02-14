@@ -24,7 +24,7 @@ const personas = [
 async function obtenerGuardiaActual() {
   try {
     // Obtener el historial desde el blob store
-    const { blobs } = await list(BLOB_STORE_URL);
+    const { blobs } = await list(BLOB_STORE_URL+'/historial-new.json');
 
     // Filtrar blobs con contenido válido y parsear el historial
     const historial = blobs
@@ -59,7 +59,7 @@ async function agregarHistorial(persona) {
 
   try {
     // Guardar el nuevo registro en el blob store
-    await put(`${BLOB_STORE_URL}/historial-${Date.now()}.json`, JSON.stringify(nuevoRegistro), {
+    await put(`${BLOB_STORE_URL}/historial-new.json`, JSON.stringify(nuevoRegistro), {
       access: 'public',
       token: process.env.BLOB_READ_WRITE_TOKEN
     });
