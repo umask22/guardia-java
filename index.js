@@ -28,8 +28,22 @@ async function obtenerGuardiaActual() {
 
   // Obtener el historial desde el blob store
   const { blobs } = await list(BLOB_STORE_URL);
-  const historial = blobs.map(blob => JSON.parse(blob.content));
 
+  const historial = blobs
+    .filter(blob => blob.content) // Filtra blobs con contenido definido
+    .map(blob => {
+      try {
+        return JSON.parse(blob.content); // Intenta parsear el contenido como JSON
+      } catch (error) {
+        console.error("Error al parsear el blob:", blob.content, error);
+        return null; // Si hay un error, devuelve null
+      }
+    })
+    .filter(entry => entry !== null);
+
+  if (historial.length === 0) {
+    historial.push({ fecha: "2024-01-01", persona: personas[0].nombre });
+  }
   return historial.length > semanasTranscurridas
     ? historial[semanasTranscurridas].persona
     : personas[semanasTranscurridas % personas.length].nombre;
@@ -68,4 +82,6 @@ app.get("/saltar", async (req, res) => {
   res.json({ mensaje: `Guardia pasada a ${personas[siguiente].nombre}` });
 });
 
+console.log("Blobs obtenidos:", blobs);
+console.log("Historial parseado:", historial);
 module.exports = app;
