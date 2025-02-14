@@ -3,11 +3,21 @@ const app = express();
 const fs = require("fs");
 
 const archivoHistorial = "historial.json";
-const personas = ["Persona 1", "Persona 2", "Persona 3"];
-
-app.get("/", (req, res) => {
-    res.send("hola mundo");
-});
+const telefonoGeneral = "999-999-9999";
+const personas = [
+  {
+    nombre: "Hector Giudatto",
+    telefono: "11111111"
+  },
+  {
+    nombre: "Jonathan Bazan",
+    telefono: "222222" 
+  },
+  {
+    nombre: "Maximiliano Martin",
+    telefono: "33333"
+  }
+];
 
 // Cargar historial o inicializar si no existe
 let historial = fs.existsSync(archivoHistorial)
@@ -33,20 +43,23 @@ function agregarHistorial(persona) {
 
 app.use(express.json());
 
-app.get("/guardia", (req, res) => {
+app.get("/", (req, res) => {
   const guardia = obtenerGuardiaActual();
-  res.json({ guardia });
+  const guardiaInfo = personas.find(p => p.nombre === guardia);
+  res.json({
+    nombre: guardiaInfo.nombre,
+    telefono: guardiaInfo.telefono,
+    telefonoGeneral
+  });
 });
 
 app.post("/saltar", (req, res) => {
   const actual = obtenerGuardiaActual();
-  let index = personas.indexOf(actual);
+
+  let index = personas.findIndex(p => p.nombre === actual);
   let siguiente = (index + 1) % personas.length;
-  if (personas[siguiente] === "Persona 2") {
-    siguiente = (siguiente + 1) % personas.length;
-  }
-  agregarHistorial(personas[siguiente]);
-  res.json({ mensaje: `Guardia pasada a ${personas[siguiente]}` });
+  agregarHistorial(personas[siguiente].nombre);
+  res.json({ mensaje: `Guardia pasada a ${personas[siguiente].nombre}` });
 });
 
 
