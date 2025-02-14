@@ -20,6 +20,9 @@ const personas = [
 
 async function obtenerHistorial() {
   try{  
+    if (!process.env.EDGE_CONFIG) {
+      throw new Error("EDGE_CONFIG environment variable is not set.");
+    }
     const historial = await kv.get("historial", { store: "guardia-java-store" });
     console.log('Historial desde Edge Config Store:', historial);
 
@@ -91,5 +94,6 @@ app.get("/saltar", async (req, res) => {
   }
 });
 
+console.log('Conexión con Edge Config:', process.env.EDGE_CONFIG);
 
 module.exports = app;
