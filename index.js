@@ -29,6 +29,7 @@ async function obtenerGuardiaActual() {
 
     // Si el archivo no existe, devolver la primera persona
     if (!blob) {
+      console.log("No se encontró el archivo historial.json. Usando la primera persona.");
       return personas[0].nombre;
     }
 
@@ -39,10 +40,13 @@ async function obtenerGuardiaActual() {
 
     // Si hay historial, devolver la última entrada
     if (historial.length > 0) {
-      return historial[historial.length - 1].persona;
+      const ultimoRegistro = historial[historial.length - 1];
+      console.log("Último registro:", ultimoRegistro); // Log para depuración
+      return ultimoRegistro.persona;
     }
 
     // Si no hay historial, devolver la primera persona
+    console.log("El historial está vacío. Usando la primera persona.");
     return personas[0].nombre;
   } catch (error) {
     console.error("Error al obtener el historial desde el blob store:", error);
