@@ -1,9 +1,10 @@
 const express = require("express");
 const app = express();
-const { put, list } = require('@vercel/blob');
+const { put, get } = require('@vercel/blob');
 
 const telefonoGeneral = "999-999-9999";
 const BLOB_STORE_URL = "https://guardia-java-blob.vercel.app"; // URL de tu blob store en Vercel
+const ARCHIVO_HISTORIAL = "historial.json"; // Nombre del archivo de historial
 
 const personas = [
   {
@@ -24,20 +25,17 @@ const personas = [
 async function obtenerGuardiaActual() {
   try {
     // Obtener el historial desde el blob store
-    const { blobs } = await list(BLOB_STORE_URL+'/historial-new.json');
+    const blob = await get(`${BLOB_STORE_URL}/${ARCHIVO_HISTORIAL}`);
 
-    // Filtrar blobs con contenido válido y parsear el historial
-    const historial = blobs
-      .filter(blob => blob.content) // Filtra blobs con contenido definido
-      .map(blob => {
-        try {
-          return JSON.parse(blob.content); // Intenta parsear el contenido como JSON
-        } catch (error) {
-          console.error("Error al parsear el blob:", blob.content, error);
-          return null; // Si hay un error, devuelve null
-        }
-      })
-      .filter(entry => entry !== null); // Filtra entradas inválidas
+    // Si el archivo no existe, devolver la primera persona
+    if (!blob) {
+      return personas[0].nombre;
+    }
+
+    // Parsear el contenido del blob como JSON
+    const historial = JSON.parse(blob.content);
+
+    console.log("Historial obtenido:", historial); // Log para depuración
 
     // Si hay historial, devolver la última entrada
     if (historial.length > 0) {
@@ -58,11 +56,27 @@ async function agregarHistorial(persona) {
   const nuevoRegistro = { fecha: hoy, persona: persona.nombre };
 
   try {
-    // Guardar el nuevo registro en el blob store
-    await put(`${BLOB_STORE_URL}/historial-new.json`, JSON.stringify(nuevoRegistro), {
+    // Obtener el historial actual
+    let historial = [];
+    try {
+      const blob = await get(`${BLOB_STORE_URL}/${ARCHIVO_HISTORIAL}`);
+      if (blob) {
+        historial = JSON.parse(blob.content);
+      }
+    } catch (error) {
+      console.error("Error al obtener el historial:", error);
+    }
+
+    // Agregar el nuevo registro al historial
+    historial.push(nuevoRegistro);
+
+    // Guardar el historial actualizado en el blob store
+    await put(`${BLOB_STORE_URL}/${ARCHIVO_HISTORIAL}`, JSON.stringify(historial), {
       access: 'public',
       token: process.env.BLOB_READ_WRITE_TOKEN
     });
+
+    console.log("Nuevo registro guardado:", nuevoRegistro); // Log para verificar
   } catch (error) {
     console.error("Error al guardar el historial en el blob store:", error);
   }
@@ -92,7 +106,10 @@ app.get("/saltar", async (req, res) => {
     let index = personas.findIndex(p => p.nombre === actual);
     let siguiente = (index + 1) % personas.length;
     await agregarHistorial(personas[siguiente]);
-    res.json({ mensaje: `Guardia pasada a ${personas[siguiente].nombre}` });
+
+    // Forzar la actualización del historial
+    const nuevaGuardia = await obtenerGuardiaActual();
+    res.json({ mensaje: `Guardia pasada a ${personas[siguiente].nombre}`, nuevaGuardia });
   } catch (error) {
     console.error("Error en la ruta /saltar:", error);
     res.status(500).json({ error: "Error interno del servidor" });
