@@ -4,6 +4,8 @@ const fs = require("fs");
 
 const archivoHistorial = "historial.json";
 const telefonoGeneral = "999-999-9999";
+let historial = [];
+
 const personas = [
   {
     nombre: "Hector Giudatto",
@@ -41,7 +43,11 @@ function obtenerGuardiaActual() {
 function agregarHistorial(persona) {
   const hoy = new Date().toISOString().split("T")[0];
   historial.push({ fecha: hoy, persona: persona.nombre }); // Guarda solo el nombre
-  fs.writeFileSync(archivoHistorial, JSON.stringify(historial || [], null, 2));
+  try {
+    fs.writeFileSync(archivoHistorial, JSON.stringify(historial, null, 2));
+  } catch (error) {
+    console.error("Error al escribir el archivo de historial:", error);
+  }
 }
 
 app.use(express.json());
