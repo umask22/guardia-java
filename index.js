@@ -1,6 +1,6 @@
 const express = require("express");
 const app = express();
-const { put, get, del } = require('@vercel/blob'); // Importar `del` para eliminar blobs
+const { put, get, del } = require('@vercel/blob'); // Importar correctamente las funciones
 
 const telefonoGeneral = "999-999-9999";
 const BLOB_STORE_URL = "https://guardia-java-blob.vercel.app"; // URL de tu blob store en Vercel
@@ -24,8 +24,12 @@ const personas = [
 // Obtener la persona en guardia esta semana
 async function obtenerGuardiaActual() {
   try {
+    console.log("Obteniendo historial desde el blob store..."); // Log para depuración
+
     // Obtener el historial desde el blob store
     const blob = await get(`${BLOB_STORE_URL}/${ARCHIVO_HISTORIAL}`);
+
+    console.log("Blob obtenido:", blob); // Log para depuración
 
     // Si el archivo no existe, devolver la primera persona
     if (!blob) {
