@@ -81,7 +81,8 @@ async function agregarHistorial(persona) {
     // Guardar el historial actualizado en el blob store
     await put(`${BLOB_STORE_URL}/${ARCHIVO_HISTORIAL}`, JSON.stringify(historial), {
       access: 'public',
-      token: process.env.BLOB_READ_WRITE_TOKEN
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+      addRandomSuffix: false // Evitar la generación de nombres únicos
     });
 
     console.log("Nuevo registro guardado:", nuevoRegistro); // Log para verificar
