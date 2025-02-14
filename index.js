@@ -1,11 +1,8 @@
 const express = require("express");
 const app = express();
-const fs = require("fs");
+const { kv } = require('@vercel/edge-config');
 
-const archivoHistorial = "historial.json";
 const telefonoGeneral = "999-999-9999";
-let historial = [];
-
 const personas = [
   {
     nombre: "Hector Giudatto",
@@ -21,39 +18,34 @@ const personas = [
   }
 ];
 
-try {
-  if (fs.existsSync(archivoHistorial)) {
-    const historialData = fs.readFileSync(archivoHistorial, 'utf8');
-    historial = historialData ? JSON.parse(historialData) : [];
-  }
-} catch (error) {
-  console.error("Error al leer el archivo de historial:", error);
+async function obtenerHistorial() {
+  const historial = await kv.get("historial", { store: "guardia-java-store" });
+  return historial ? JSON.parse(historial) : [];
 }
 
 // Obtener la persona en guardia esta semana
-function obtenerGuardiaActual() {
+async function obtenerGuardiaActual() {
   const fechaInicio = new Date("2024-01-01"); // Lunes base
   const hoy = new Date();
   const semanasTranscurridas = Math.floor((hoy - fechaInicio) / (7 * 24 * 60 * 60 * 1000));
+  const historial = await obtenerHistorial();
   return historial.length > semanasTranscurridas
   ? historial[semanasTranscurridas].persona
   : personas[semanasTranscurridas % personas.length].nombre;
 }
 
 // Agregar guardia al historial
-function agregarHistorial(persona) {
+async function agregarHistorial(persona) {
   const hoy = new Date().toISOString().split("T")[0];
-  historial.push({ fecha: hoy, persona: persona.nombre }); // Guarda solo el nombre
-  try {
-    fs.writeFileSync(archivoHistorial, JSON.stringify(historial, null, 2));
-  } catch (error) {
-    console.error("Error al escribir o leer el archivo de historial:", error);
-  }
+  const historial = await obtenerHistorial();
+
+  historial.push({ fecha: hoy, persona: persona.nombre });
+  await kv.set("historial", JSON.stringify(historial), { store: "guardia-java-store" });
 }
 
 app.use(express.json());
 
-app.get("/", (req, res) => {
+app.get("/", async (req, res) => {
   const guardia = obtenerGuardiaActual();
   const guardiaInfo = personas.find(p => p.nombre === guardia);
   res.json({
@@ -63,11 +55,11 @@ app.get("/", (req, res) => {
   });
 });
 
-app.get("/saltar", (req, res) => {
-  const actual = obtenerGuardiaActual();
+app.get("/saltar", async (req, res) => {
+  const actual = await obtenerGuardiaActual();
   let index = personas.findIndex(p => p.nombre === actual);
   let siguiente = (index + 1) % personas.length;
-  agregarHistorial(personas[siguiente]);
+  await agregarHistorial(personas[siguiente]);
   res.json({ mensaje: `Guardia pasada a ${personas[siguiente].nombre}` });
 });
 
