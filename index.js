@@ -1,47 +1,36 @@
 const express = require("express");
 const app = express();
-
 const axios = require('axios');
 const multer = require('multer');
 const FormData = require('form-data');
+const fs = require('fs');
+const path = require('path');
 
-const upload = multer({ dest: 'uploads/' });
-
+const upload = multer({ dest: '/tmp/uploads/' });
 
 const telefonoGeneral = "999-999-9999";
 const personas = [
-  {
-    nombre: "Hector Giudatto",
-    telefono: "11111111"
-  },
-  {
-    nombre: "Jonathan Bazan",
-    telefono: "222222" 
-  },
-  {
-    nombre: "Maximiliano Martin",
-    telefono: "33333"
-  }
+  { nombre: "Hector Giudatto", telefono: "11111111" },
+  { nombre: "Jonathan Bazan", telefono: "222222" },
+  { nombre: "Maximiliano Martin", telefono: "33333" }
 ];
 
 async function obtenerHistorial() {
   try {
     const response = await axios.get('https://api.vercel.com/v1/now/blob/guardia-java-blob');
     console.log('Historial desde Blob Store:', response.data);
-
     return response.data ? JSON.parse(response.data) : [];
   } catch (error) {
     console.error("Error al obtener el historial desde Blob Store:", error);
-    return []; // Devolver un historial vacío en caso de error
+    return [];
   }
 }
-// Obtener la persona en guardia esta semana
+
 async function obtenerGuardiaActual() {
   try {
-    const fechaInicio = new Date("2024-01-01"); // Lunes base
+    const fechaInicio = new Date("2024-01-01");
     const hoy = new Date();
     const semanasTranscurridas = Math.floor((hoy - fechaInicio) / (7 * 24 * 60 * 60 * 1000));
-
     const historial = await obtenerHistorial();
     console.log('Historial:', historial);
 
@@ -59,11 +48,9 @@ async function obtenerGuardiaActual() {
   }
 }
 
-// Agregar guardia al historial
 async function agregarHistorial(persona) {
   const hoy = new Date().toISOString().split("T")[0];
   const historial = await obtenerHistorial();
-
   historial.push({ fecha: hoy, persona: persona.nombre });
 
   const formData = new FormData();
@@ -110,16 +97,19 @@ app.get("/saltar", async (req, res) => {
   }
 });
 
-// Endpoint para subir archivos (si es necesario para otras operaciones)
+// Endpoint para subir archivos a Vercel Blob Store
 app.post("/upload", upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).send('No file uploaded');
     }
 
+    // Crear un stream del archivo cargado
+    const filePath = path.join('/tmp/uploads', req.file.filename);
     const formData = new FormData();
-    formData.append('file', req.file.path);
+    formData.append('file', fs.createReadStream(filePath));
 
+    // Subir el archivo a Vercel Blob Store
     const response = await axios.post('https://api.vercel.com/v1/now/blob/guardia-java-blob/upload', formData, {
       headers: {
         ...formData.getHeaders(),
@@ -127,8 +117,12 @@ app.post("/upload", upload.single('file'), async (req, res) => {
       }
     });
 
+    // Eliminar el archivo temporal después de subirlo
+    fs.unlinkSync(filePath);
+
     res.json({ message: 'File uploaded successfully', file: response.data });
   } catch (error) {
+    console.error("Error uploading file to Vercel Blob Store:", error);
     res.status(500).send('Error uploading file');
   }
 });
