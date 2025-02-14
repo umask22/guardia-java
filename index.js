@@ -46,21 +46,29 @@ async function agregarHistorial(persona) {
 app.use(express.json());
 
 app.get("/", async (req, res) => {
-  const guardia = obtenerGuardiaActual();
-  const guardiaInfo = personas.find(p => p.nombre === guardia);
-  res.json({
-    nombre: guardiaInfo.nombre,
-    telefono: guardiaInfo.telefono,
-    telefonoGeneral
-  });
+  try{  
+    const guardia = await obtenerGuardiaActual();
+    const guardiaInfo = personas.find(p => p.nombre === guardia);
+    res.json({
+      nombre: guardiaInfo.nombre,
+      telefono: guardiaInfo.telefono,
+      telefonoGeneral
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Error al obtener la guardia actual" });
+  }
 });
 
 app.get("/saltar", async (req, res) => {
-  const actual = await obtenerGuardiaActual();
-  let index = personas.findIndex(p => p.nombre === actual);
-  let siguiente = (index + 1) % personas.length;
-  await agregarHistorial(personas[siguiente]);
-  res.json({ mensaje: `Guardia pasada a ${personas[siguiente].nombre}` });
+  try{  
+    const actual = await obtenerGuardiaActual();
+    let index = personas.findIndex(p => p.nombre === actual);
+    let siguiente = (index + 1) % personas.length;
+    await agregarHistorial(personas[siguiente]);
+    res.json({ mensaje: `Guardia pasada a ${personas[siguiente].nombre}` });
+  } catch (error) {
+    res.status(500).json({ error: "Error al pasar la guardia" });
+  }
 });
 
 
